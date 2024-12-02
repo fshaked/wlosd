@@ -1,0 +1,11 @@
+window {
+  background: transparent;
+}
+
+window > label {
+  background-color: #101010a0;
+  border: solid 9px #6090ff;
+  color: #6090ff;
+  font-size: 100px;
+  padding: 0px 40px;
+}

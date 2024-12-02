@@ -1,0 +1,10 @@
+[tool.pylint.basic]
+# Regular expression which should only match function or class names that do not
+# require a docstring.
+no-docstring-rgx = "^."
+
+[tool.yapf]
+based_on_style = "google"
+
+[tool.mypy]
+ignore_missing_imports = true
