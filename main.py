@@ -40,7 +40,7 @@ class MainApp(Gtk.Application):
     def __init__(self) -> None:
         assert ARGS
         super().__init__(
-            application_id="my.pyosd",
+            application_id="com.wlosd",
             # Allow multiple instances.
             flags=Gio.ApplicationFlags.NON_UNIQUE)
 
