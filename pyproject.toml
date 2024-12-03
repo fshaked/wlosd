@@ -1,3 +1,54 @@
+[project]
+name = "wlosd"
+description = "OSD for wayland."
+dynamic = ["version"]
+requires-python = ">= 3.8"
+dependencies = [
+  "pycairo>=1.27.0",
+  "PyGObject>=3.50.0",
+]
+authors = [
+  {name = "Shaked Flur"},
+]
+maintainers = [
+  {name = "Shaked Flur"},
+]
+readme = "README.md"
+# license = {file = "LICENSE"}
+keywords = ["OSD", "wayland", "sway", "layer-shell", "wlr", "wlroots"]
+classifiers = [
+  # See full list https://pypi.org/classifiers/
+
+  #   3 - Alpha
+  #   4 - Beta
+  #   5 - Production/Stable
+  "Development Status :: 4 - Beta",
+
+  "Intended Audience :: End Users/Desktop",
+  "Intended Audience :: System Administrators",
+  "Topic :: Desktop Environment",
+  "Topic :: Utilities",
+
+  "License :: OSI Approved :: MIT License",
+
+  "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+# See https://packaging.python.org/en/latest/specifications/well-known-project-urls/#well-known-labels
+Homepage = "https://github.com/fshaked/wlosd"
+Documentation = "https://github.com/fshaked/wlosd"
+Repository = "https://github.com/fshaked/wlosd.git"
+Issues = "https://github.com/fshaked/wlosd/issues"
+Changelog = "https://github.com/fshaked/wlosd/CHANGELOG.md"
+
+[build-system]
+requires = ["setuptools >= 75.6.0"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+wlosd = "wlosd.wlosd:main"
+
 [tool.pylint.basic]
 # Regular expression which should only match function or class names that do not
 # require a docstring.

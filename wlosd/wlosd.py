@@ -3,6 +3,7 @@
 import argparse
 from ctypes import CDLL
 import logging
+import os
 import sys
 import threading
 import typing as t
@@ -277,8 +278,10 @@ def main() -> None:
     """Entry point."""
     logging.basicConfig(level=logging.WARN)
 
+    prog, _ = os.path.splitext(os.path.basename(__file__))
+
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        description=__doc__)
+        prog=prog, description=__doc__)
     # yapf: disable
     parser.add_argument("-c", "--css", default=None,
                         help="set the css file")
@@ -305,7 +308,3 @@ def main() -> None:
 
     threading.Thread(target=cmds_listener, args=(app,), daemon=True).start()
     app.run(None)
-
-
-if __name__ == "__main__":
-    main()
