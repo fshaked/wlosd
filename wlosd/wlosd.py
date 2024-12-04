@@ -167,53 +167,86 @@ def cmds_listener(app: MainApp) -> None:
         "help", "exit", "quit", "show", "hide", "list-uids", "reload-css"
     ]
 
+    description = {
+        "exit": "Terminate the program.",
+        "help": "Display help information about cmd.",
+        "hide": "Hide a message.",
+        "list-uids": "List all currently showing uids.",
+        "quit": "Terminate the program.",
+        "reload-css": "Reload and reapply the css file.",
+        "show":
+            "Show a message."
+            " The following input lines will compose the message text."
+            " The text can include Pango markup."
+            " By default, lines are read until the first empty line."
+            " The --end-mark option can be used to change the end of input marker."
+            " By default, the message will be displayed in the centre of the"
+            " screen."
+            " Use the -t, -b, -l, -r options to change the position."
+            " A combination like -tl can be used to display the message in a"
+            " corner (top-left in this case)."
+            " The margin property in the style sheet can be used to further"
+            " adjust the position.",
+    }
+
     parser = argparse.ArgumentParser(
         exit_on_error=False,
         add_help=False,
         prog="",
-        epilog="'help CMD' for more information about CMD.")
+        epilog="'help cmd' for more information about 'cmd'.")
     parser.error = ParsingError.throw  # type: ignore[method-assign]
 
-    subparser = parser.add_subparsers(dest="command",
-                                      required=True,
-                                      title="Commands",
-                                      metavar="CMD",
-                                      help=f"one of {{{','.join(commands)}}}")
+    cmd_parsers = parser.add_subparsers(dest="command",
+                                        required=True,
+                                        title="Commands",
+                                        metavar="cmd",
+                                        help=f"one of {{{','.join(commands)}}}")
 
     parsers = {}
     for cmd in commands:
-        parsers[cmd] = subparser.add_parser(cmd, prog=cmd, add_help=False)
+        parsers[cmd] = cmd_parsers.add_parser(cmd,
+                                              prog=cmd,
+                                              add_help=False,
+                                              description=description[cmd])
         parsers[cmd].error = ParsingError.throw  # type: ignore[method-assign]
 
-    parsers["help"].description = "Display help information about CMD."
     parsers["help"].add_argument("help_cmd",
                                  default=None,
                                  choices=([""] + commands),
                                  nargs="?",
                                  metavar=",".join(commands))
 
-    parsers["show"].add_argument("-s", "--sec", type=float, default=None)
-    parsers["show"].add_argument("-e", "--end-mark", default="")
-    parsers["show"].add_argument("-c", "--class", action="append", dest="classes",
-                                 default=[]) # yapf: disable
-    parsers["show"].add_argument("-o", "--output", default=None)
-    parsers["show"].add_argument("-t", "--top", dest="position", default=[],
-                                 action="append_const",
-                                 const=Gtk4LayerShell.Edge.TOP)  # yapf: disable
+    # yapf: disable
     parsers["show"].add_argument("-b", "--bottom", dest="position", default=[],
-                                 action="append_const",
-                                 const=Gtk4LayerShell.Edge.BOTTOM)  # yapf: disable
+                                 action="append_const", const=Gtk4LayerShell.Edge.BOTTOM,
+                                 help="Display the message at the bottom of the screen.")
+    parsers["show"].add_argument("-c", "--class", action="append", dest="classes",
+                                 default=[], help="Assign CLASS to the window"
+                                 " element of the message (for use with css).")
+    parsers["show"].add_argument("-e", "--end-mark", default="", metavar="MARK",
+                                 help="(default: \"\") terminate the message"
+                                 " input when reading MARK.")
     parsers["show"].add_argument("-l", "--left", dest="position", default=[],
-                                 action="append_const",
-                                 const=Gtk4LayerShell.Edge.LEFT)  # yapf: disable
+                                 action="append_const", const=Gtk4LayerShell.Edge.LEFT,
+                                 help="Display the message on the left side of the screen.")
+    parsers["show"].add_argument("-o", "--output", default=None, metavar="OUT",
+                                 help="Show the message on output OUT (e.g. DP-1).")
     parsers["show"].add_argument("-r", "--right", dest="position", default=[],
-                                 action="append_const",
-                                 const=Gtk4LayerShell.Edge.RIGHT)  # yapf: disable
-    parsers["show"].add_argument("uid")
+                                 action="append_const", const=Gtk4LayerShell.Edge.RIGHT,
+                                 help="Display the message on the right side of the screen.")
+    parsers["show"].add_argument("-s", "--sec", type=float, default=None,
+                                 help="Hide the message after SEC seconds.")
+    parsers["show"].add_argument("-t", "--top", dest="position", default=[],
+                                 action="append_const", const=Gtk4LayerShell.Edge.TOP,
+                                 help="Display the message at the top of the screen.")
+    parsers["show"].add_argument("uid", help="A unique identifier; can be used"
+                                 " to replace the message (by another show"
+                                 " command) or hide it.")
 
-    parsers["hide"].add_argument("uid")
-
+    parsers["hide"].add_argument("uid", help="the uid of the show command to hide.")
+    # yapf: enable
     # Process commands from stdin
+
     while True:
         cmd_line: str = sys.stdin.readline()
 
@@ -222,11 +255,8 @@ def cmds_listener(app: MainApp) -> None:
             GLib.idle_add(app.on_exit)
             return
 
-        # split to words
-        cmd: list[str] = cmd_line.removesuffix("\n").split(" ")
-
         try:
-            args = parser.parse_args(cmd)
+            args = parser.parse_args(cmd_line.removesuffix("\n").split(" "))
         except argparse.ArgumentError as e:
             logger.warning("parsing error: %s", e)
             continue
