@@ -2,7 +2,8 @@
 name = "wlosd"
 description = "OSD for wayland."
 dynamic = ["version"]
-requires-python = ">= 3.8"
+# pycairo requires Python 3.9+
+requires-python = ">= 3.9"
 dependencies = [
   "pycairo>=1.27.0",
   "PyGObject>=3.50.0",
@@ -14,6 +15,7 @@ maintainers = [
   {name = "Shaked Flur"},
 ]
 readme = "README.md"
+# License is declared in the classifiers below
 # license = {file = "LICENSE"}
 keywords = ["OSD", "wayland", "sway", "layer-shell", "wlr", "wlroots"]
 classifiers = [
