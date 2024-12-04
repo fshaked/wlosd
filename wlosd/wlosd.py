@@ -28,6 +28,8 @@ from gi.repository import GLib
 from gi.repository import Gtk
 # https://github.com/wmww/gtk4-layer-shell
 from gi.repository import Gtk4LayerShell
+
+from .version import __version__
 # pylint: enable=wrong-import-position
 # yapf: enable
 
@@ -287,7 +289,7 @@ def main() -> None:
                         help="set the css file")
     parser.add_argument("-v", "--verbosity", action="count", default=0,
                         help="increase output verbosity")
-    parser.add_argument("-V", "--version", action="version", version="%(prog)s 0.0")
+    parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {__version__}")
     # yapf: enable
 
     global ARGS  # pylint: disable=global-statement
