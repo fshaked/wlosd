@@ -35,7 +35,7 @@ Arch Linux:
 
 ```
 sudo pacman -S python cairo pkgconf gobject-introspection gtk4 gcc gtk4-layer-shell
-pip install wlosd
+pip install pygobject
 ```
 
 For other distributions, you will need:
