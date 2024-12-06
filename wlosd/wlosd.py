@@ -143,7 +143,6 @@ class MainApp(Gtk.Application):
 
     def on_reload_css(self) -> bool:
         if ARGS.css is None:
-            logger.warning("no css file to reload")
             return GLib.SOURCE_REMOVE
         self._css_provider.load_from_path(ARGS.css)
         return GLib.SOURCE_REMOVE
@@ -163,11 +162,7 @@ class ParsingError(Exception):
 
 
 def cmds_listener(app: MainApp) -> None:
-    commands = [
-        "help", "exit", "quit", "show", "hide", "list-uids", "reload-css"
-    ]
-
-    description = {
+    commands = {
         "exit": "Terminate the program.",
         "help": "Display help information about cmd.",
         "hide": "Hide a message.",
@@ -203,20 +198,18 @@ def cmds_listener(app: MainApp) -> None:
                                         help=f"one of {{{','.join(commands)}}}")
 
     parsers = {}
-    for cmd in commands:
+    for cmd, description in commands.items():
         parsers[cmd] = cmd_parsers.add_parser(cmd,
                                               prog=cmd,
                                               add_help=False,
-                                              description=description[cmd])
+                                              description=description)
         parsers[cmd].error = ParsingError.throw  # type: ignore[method-assign]
 
-    parsers["help"].add_argument("help_cmd",
-                                 default=None,
-                                 choices=([""] + commands),
-                                 nargs="?",
+    # yapf: disable
+    parsers["help"].add_argument("help_cmd", default=None, nargs="?",
+                                 choices=([""] + list(commands)),
                                  metavar=",".join(commands))
 
-    # yapf: disable
     parsers["show"].add_argument("-b", "--bottom", dest="position", default=[],
                                  action="append_const", const=Gtk4LayerShell.Edge.BOTTOM,
                                  help="Display the message at the bottom of the screen.")
@@ -245,7 +238,6 @@ def cmds_listener(app: MainApp) -> None:
 
     parsers["hide"].add_argument("uid", help="the uid of the show command to hide.")
     # yapf: enable
-    # Process commands from stdin
 
     while True:
         cmd_line: str = sys.stdin.readline()
@@ -268,15 +260,32 @@ def cmds_listener(app: MainApp) -> None:
             continue
 
         match args.command:
+            case "exit" | "quit":
+                GLib.idle_add(app.on_exit)
+                return
+
             case "help":
                 if args.help_cmd:
                     parsers[args.help_cmd].print_help()
                 else:
                     parser.print_help()
 
-            case "exit" | "quit":
-                GLib.idle_add(app.on_exit)
-                return
+            case "hide":
+                if args.uid in app.get_uids():
+                    GLib.idle_add(app.on_hide, args.uid)
+                else:
+                    print(f"unrecognised uid: {args.uid}")
+
+            case "list-uids":
+                uids = app.get_uids()
+                if uids:
+                    print("\n".join(uids))
+
+            case "reload-css":
+                if ARGS.css is None:
+                    print("no css file to reload")
+                else:
+                    GLib.idle_add(app.on_reload_css)
 
             case "show":
                 text = read_text(args.end_mark)
@@ -284,17 +293,8 @@ def cmds_listener(app: MainApp) -> None:
                 GLib.idle_add(app.on_show, args.uid, text, args.sec,
                               args.classes, args.output, args.position)
 
-            case "hide":
-                GLib.idle_add(app.on_hide, args.uid)
-
-            case "reload-css":
-                GLib.idle_add(app.on_reload_css)
-
-            case "list-uids":
-                print("\n".join(app.get_uids()))
-
             case _:
-                logger.warning("unknown command: %s", cmd_line)
+                assert False, f"unknown command: {cmd_line}"
 
 
 def read_text(end_mark: str) -> str:
