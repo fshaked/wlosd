@@ -56,7 +56,7 @@ Or clone this repository.
 wlosd reads commands from standard input. For example, run in a terminal:
 
 ```
-cat - | wlosd
+wlosd
 show --end-mark END test
 Some text.
 More text.
@@ -96,7 +96,7 @@ lines somewhere in your startup scripts:
 ```
 rm -f "${XDG_RUNTIME_DIR}/wlosdpipe"
 mkfifo "${XDG_RUNTIME_DIR}/wlosdpipe"
-tail -f "${XDG_RUNTIME_DIR}/wlosdpipe" | wlosd &
+tail -fn+1 "${XDG_RUNTIME_DIR}/wlosdpipe" | wlosd &
 ```
 
 And send commands to wlosd like this:
