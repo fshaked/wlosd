@@ -35,27 +35,45 @@ from .version import __version__
 
 logger: logging.Logger = logging.getLogger(__name__)
 
-ARGS: t.Optional[argparse.Namespace] = None
+CONFIG_DIRS_SEARCH = [
+    os.path.expanduser("~/.wlosd/"),
+    # insert "${XDG_CONFIG_HOME}/wlosd/" here, see below
+    os.path.expanduser("~/.config/wlosd/"),
+    "/etc/xdg/wlosd/"
+]
+if "XDG_CONFIG_HOME" in os.environ:
+    CONFIG_DIRS_SEARCH.insert(1,
+                              os.path.expandvars("${XDG_CONFIG_HOME}/wlosd/"))
+
+
+def find_config_file(name: str) -> t.Optional[str]:
+    for directory in CONFIG_DIRS_SEARCH:
+        path = os.path.join(directory, name)
+        if os.path.isfile(path):
+            return path
+    return None
 
 
 class MainApp(Gtk.Application):
 
-    def __init__(self) -> None:
-        assert ARGS
+    def __init__(self, css_file: t.Optional[str]) -> None:
         super().__init__(
             application_id="com.wlosd",
             # Allow multiple instances.
             flags=Gio.ApplicationFlags.NON_UNIQUE)
 
         self._windows: dict[str, Gtk.Window] = {}
-        self._show_sec_timers: dict[str, int] = {}
+        self._show_timers: dict[str, int] = {}
 
         self._display: Gdk.Display = Gdk.DisplayManager.get(
         ).get_default_display()
 
-        if ARGS.css is not None:
+        self._css_file = css_file
+        self._css_provider = None
+
+        if self._css_file is not None:
             self._css_provider = Gtk.CssProvider()
-            self._css_provider.load_from_path(ARGS.css)
+            self._css_provider.load_from_path(self._css_file)
             Gtk.StyleContext.add_provider_for_display(
                 self._display, self._css_provider,
                 Gtk.STYLE_PROVIDER_PRIORITY_USER)
@@ -66,11 +84,11 @@ class MainApp(Gtk.Application):
     def on_activate(self, _src) -> None:
         self.hold()
 
-    def cancel_hide_sec_timer(self, uid: str) -> None:
-        if uid not in self._show_sec_timers:
+    def cancel_hide_timer(self, uid: str) -> None:
+        if uid not in self._show_timers:
             return
-        GLib.source_remove(self._show_sec_timers[uid])
-        del self._show_sec_timers[uid]
+        GLib.source_remove(self._show_timers[uid])
+        del self._show_timers[uid]
 
     def on_exit(self) -> bool:
         self.quit()
@@ -82,9 +100,10 @@ class MainApp(Gtk.Application):
             # pylint: disable-next=no-member
             surface.set_input_region(cairo.Region([]))
 
-    def on_show(self, uid: str, text: str, hide_sec: float | None,
-                classes: list[str], output: str | None, position: list) -> bool:
-        self.cancel_hide_sec_timer(uid)
+    def on_show(self, uid: str, text: str, is_markup: bool,
+                hide_sec: float | None, classes: list[str], output: str | None,
+                position: list) -> bool:
+        self.cancel_hide_timer(uid)
 
         if uid not in self._windows:
             window = Gtk.Window(name=uid)
@@ -120,19 +139,26 @@ class MainApp(Gtk.Application):
         ]:
             Gtk4LayerShell.set_anchor(window, gtk_edge, gtk_edge in position)
 
-        label.set_markup(text)
+        if is_markup:
+            label.set_markup(text)
+        else:
+            label.set_text(text)
+
         label.set_css_classes(classes)
+
+        # Make the window resize to match the label.
+        window.set_default_size(1, 1)
 
         window.present()
 
         if hide_sec is not None:
-            self._show_sec_timers[uid] = GLib.timeout_add(
-                int(hide_sec * 1000), self.on_hide, uid)
+            self._show_timers[uid] = GLib.timeout_add(int(hide_sec * 1000),
+                                                      self.on_hide, uid)
 
         return GLib.SOURCE_REMOVE
 
     def on_hide(self, uid: str) -> bool:
-        self.cancel_hide_sec_timer(uid)
+        self.cancel_hide_timer(uid)
         if uid not in self._windows:
             logger.warning("no such id: %s", uid)
             return GLib.SOURCE_REMOVE
@@ -142,9 +168,9 @@ class MainApp(Gtk.Application):
         return GLib.SOURCE_REMOVE
 
     def on_reload_css(self) -> bool:
-        if ARGS.css is None:
+        if self._css_provider is None:
             return GLib.SOURCE_REMOVE
-        self._css_provider.load_from_path(ARGS.css)
+        self._css_provider.load_from_path(self._css_file)
         return GLib.SOURCE_REMOVE
 
 
@@ -222,6 +248,10 @@ def cmds_listener(app: MainApp) -> None:
     parsers["show"].add_argument("-l", "--left", dest="position", default=[],
                                  action="append_const", const=Gtk4LayerShell.Edge.LEFT,
                                  help="Display the message on the left side of the screen.")
+    parsers["show"].add_argument("-m", "--markup", action="store_true",
+                                 help="Indicate that Pango markup is used in"
+                                 " the text (<, > and & characters must be"
+                                 " escaped as '&lt;', '&gt;', and '&amp;').")
     parsers["show"].add_argument("-o", "--output", default=None, metavar="OUT",
                                  help="Show the message on output OUT (e.g. DP-1).")
     parsers["show"].add_argument("-r", "--right", dest="position", default=[],
@@ -282,23 +312,21 @@ def cmds_listener(app: MainApp) -> None:
                     print("\n".join(uids))
 
             case "reload-css":
-                if ARGS.css is None:
-                    print("no css file to reload")
-                else:
-                    GLib.idle_add(app.on_reload_css)
+                GLib.idle_add(app.on_reload_css)
 
             case "show":
                 text = read_text(args.end_mark)
 
-                GLib.idle_add(app.on_show, args.uid, text, args.sec,
-                              args.classes, args.output, args.position)
+                GLib.idle_add(app.on_show, args.uid, text, args.markup,
+                              args.sec, args.classes, args.output,
+                              args.position)
 
             case _:
                 assert False, f"unknown command: {cmd_line}"
 
 
 def read_text(end_mark: str) -> str:
-    text: str = ""
+    text = ""
     for line in sys.stdin:
         if line[:-1] == end_mark:
             break
@@ -310,22 +338,30 @@ def main() -> None:
     """Entry point."""
     logging.basicConfig(level=logging.WARN)
 
-    prog, _ = os.path.splitext(os.path.basename(__file__))
+    prog, _py = os.path.splitext(os.path.basename(__file__))
 
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        prog=prog, description=__doc__)
+        prog=prog,
+        description=__doc__,
+        epilog="If the --css option is not used, look for style.css in the"
+        " following directories (in order):\n"
+        "~/.wlosd/\n"
+        "${XDG_CONFIG_HOME}/wlosd/\n"
+        "~/.config/wlosd/\n"
+        "/etc/xdg/wlosd/\n",
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     # yapf: disable
-    parser.add_argument("-c", "--css", default=None,
+    parser.add_argument("-c", "--css", default=find_config_file("style.css"),
                         help="set the css file")
     parser.add_argument("-v", "--verbosity", action="count", default=0,
                         help="increase output verbosity")
-    parser.add_argument("-V", "--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument("-V", "--version", action="version",
+                        version=f"%(prog)s {__version__}")
     # yapf: enable
 
-    global ARGS  # pylint: disable=global-statement
-    ARGS = parser.parse_args()
+    args = parser.parse_args()
 
-    match ARGS.verbosity:
+    match args.verbosity:
         case 0:
             logger.setLevel(logging.ERROR)
         case 1:
@@ -335,7 +371,7 @@ def main() -> None:
         case _:
             logger.setLevel(logging.DEBUG)
 
-    app: MainApp = MainApp()
+    app: MainApp = MainApp(args.css)
     app.connect("activate", app.on_activate)
 
     threading.Thread(target=cmds_listener, args=(app,), daemon=True).start()
