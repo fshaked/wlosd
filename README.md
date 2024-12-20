@@ -66,10 +66,13 @@ END
 
 This should display the two lines before `END` in the centre of the currently
 focused display, on top of all other windows. The text is transparent to all
-input events. [Pango markup](https://docs.gtk.org/Pango/pango_markup.html)
-can be used in the text. The `--css` command line argument (e.g. `wlosd
---css style.css`) can be used to pass a GTK4 style sheet (see [style.css](https://github.com/fshaked/wlosd/blob/main/style.css) for example, and
-[overview](https://docs.gtk.org/gtk4/css-overview.html) and
+input events. If show is called with the `--markup` option, the text is
+interpreted as [Pango markup](https://docs.gtk.org/Pango/pango_markup.html)
+('<', '>' and '&' must be escaped as '&lt;', '&gt;', and '&amp;').
+The `--css` command line argument (e.g. `wlosd --css style.css`) can be used to
+pass a GTK4 style sheet (see
+[style.css](https://github.com/fshaked/wlosd/blob/main/style.css) for example,
+and [overview](https://docs.gtk.org/gtk4/css-overview.html) and
 [properties](https://docs.gtk.org/gtk4/css-properties.html) for documentation).
 
 To hide the text:
