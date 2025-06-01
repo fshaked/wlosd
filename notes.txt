@@ -1,0 +1,24 @@
+## Update the PyPi package
+
+# update the tools
+pip install --upgrade build twine
+# build dist/*
+python -m build
+# upload to test-pypi
+twine upload --repository testpypi dist/*
+# open https://test.pypi.org/project/wlosd
+# Install the test package
+pip install --index-url https://test.pypi.org/simple/ --no-deps wlosd
+
+
+# Upload to PyPi
+twine upload dist/*
+
+
+# Install wip
+pipx install --editable --force ./
+
+
+# Tag
+git tag -a v1b1
+git push --tags
