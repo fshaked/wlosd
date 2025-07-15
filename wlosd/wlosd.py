@@ -4,6 +4,7 @@ import argparse
 from ctypes import CDLL
 import logging
 import os
+import re
 import sys
 import threading
 import typing as t
@@ -157,14 +158,15 @@ class MainApp(Gtk.Application):
 
         return GLib.SOURCE_REMOVE
 
-    def on_hide(self, uid: str) -> bool:
-        self.cancel_hide_timer(uid)
-        if uid not in self._windows:
-            logger.warning("no such id: %s", uid)
-            return GLib.SOURCE_REMOVE
+    def on_hide(self, uids: list[str]) -> bool:
+        for uid in uids:
+            self.cancel_hide_timer(uid)
+            if uid not in self._windows:
+                logger.warning("no such id: %s", uid)
+                continue
 
-        self._windows[uid].destroy()
-        del self._windows[uid]
+            self._windows[uid].destroy()
+            del self._windows[uid]
         return GLib.SOURCE_REMOVE
 
     def on_reload_css(self) -> bool:
@@ -191,7 +193,7 @@ def cmds_listener(app: MainApp) -> None:
     commands = {
         "exit": "Terminate the program.",
         "help": "Display help information about cmd.",
-        "hide": "Hide a message.",
+        "hide": "Hide messages.",
         "list-uids": "List all currently showing uids.",
         "quit": "Terminate the program.",
         "reload-css": "Reload and reapply the css file.",
@@ -266,7 +268,10 @@ def cmds_listener(app: MainApp) -> None:
                                  " to replace the message (by another show"
                                  " command) or hide it.")
 
-    parsers["hide"].add_argument("uid", help="the uid of the show command to hide.")
+    parsers["hide"].add_argument("-r", "--regex", action="store_true",
+                                 help="Interpret uid as a (Python's re library) regular expression.")
+    parsers["hide"].add_argument("uids", metavar="uid", nargs="+",
+                                 help="uids to hide.")
     # yapf: enable
 
     while True:
@@ -301,10 +306,15 @@ def cmds_listener(app: MainApp) -> None:
                     parser.print_help()
 
             case "hide":
-                if args.uid in app.get_uids():
-                    GLib.idle_add(app.on_hide, args.uid)
+                if args.regex:
+                    hide_uids = [
+                        uid for uid in app.get_uids() if any(
+                            re.search(pattern, uid) for pattern in args.uids)
+                    ]
                 else:
-                    print(f"unrecognised uid: {args.uid}")
+                    hide_uids = [ uid for uid in args.uids if uid in app.get_uids() ]
+
+                GLib.idle_add(app.on_hide, hide_uids)
 
             case "list-uids":
                 uids = app.get_uids()
