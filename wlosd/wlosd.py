@@ -154,7 +154,7 @@ class MainApp(Gtk.Application):
 
         if hide_sec is not None:
             self._show_timers[uid] = GLib.timeout_add(int(hide_sec * 1000),
-                                                      self.on_hide, uid)
+                                                      self.on_hide, [uid])
 
         return GLib.SOURCE_REMOVE
 
