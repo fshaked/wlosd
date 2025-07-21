@@ -1,8 +1,13 @@
-window {
-  background: transparent;
+window,
+window > list,
+window > list > row {
+  padding: 0px;
+  margin: 0px;
+  border: none;
+  background: none;
 }
 
-window > label {
+window > list > row > label {
   background-color: #101010a0;
   border: solid 9px #6090ff;
   color: #6090ff;
