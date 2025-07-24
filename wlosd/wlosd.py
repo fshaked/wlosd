@@ -187,6 +187,7 @@ class MainApp(Gtk.Application):
         self.quit()
         return GLib.SOURCE_REMOVE
 
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     def on_show(self, uid: str, item: Item, window_classes: t.Sequence[str],
                 hide_sec: float | None, output: str | None,
                 position: list) -> bool:
@@ -231,11 +232,13 @@ class MainApp(Gtk.Application):
 
         if message_uid:
             found, index = self._models[window_uid].find_with_equal_func(
-                Item(message_uid, "", False, []), lambda item, _: item.uid == message_uid)
+                # The API docs say you can pass NULL (None?) instead of item (first argument).
+                # It does not seem to work in Python.
+                Item(message_uid, "", False, []) , lambda item, _: item.uid == message_uid)
             if found:
                 self._models[window_uid].remove(index)
-                # TODO: do we need to resize the window after removing a label?
-                if self._models[window_uid].get_n_items() == 0:
+                # Do we need to resize the window after removing a label?
+                if self._models[window_uid].props.n_items == 0:
                     self._windows[window_uid].destroy()
                     del self._windows[window_uid]
                     del self._models[window_uid]

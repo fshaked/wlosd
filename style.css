@@ -1,16 +1,24 @@
+@define-color primary #6090ff;
+
 window,
 window > list,
 window > list > row {
   padding: 0px;
-  margin: 0px;
-  border: none;
   background: none;
 }
 
+window {
+  border: solid 10px @primary;
+}
+
 window > list > row > label {
-  background-color: #101010a0;
-  border: solid 9px #6090ff;
-  color: #6090ff;
-  font-size: 100px;
-  padding: 0px 40px;
+  background-color: alpha(black, 0.5);
+  color: @primary;
+  font-size: 80px;
+  padding: 5px 40px;
+  border-bottom: solid 5px @primary;
+}
+
+window > list > row:last-child > label {
+  border-bottom: none;
 }
