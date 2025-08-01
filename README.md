@@ -20,7 +20,7 @@ by gtk4-layer-shell.
 Debian/Ubuntu:
 
 ```
-sudo apt install libgirepository-1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-4.0 libgtk4-layer-shell-dev
+sudo apt install libgirepository-1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-4.0 libgtk4-layer-shell-dev libgirepository-2.0-dev
 pip install pygobject
 ```
 
